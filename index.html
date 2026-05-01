@@ -139,7 +139,7 @@ th,td{padding:12px;border-bottom:1px solid #ddd;text-align:left}
 
 <script>
 
-const API = "https://script.google.com/macros/s/AKfycbzIwKLf3NFuJI8UrKBnra6P_MeL_82iP9HttK-M7BM0_gKaxCjGGEHXfATFCTh6PAGe/exec";
+const API = "https://script.google.com/macros/s/AKfycbyzpHUo3AEA61vcplZEyt5sFrno-cCHorVbszV7wGmKOvPRymGHf2R0MCI2ahiiCWhD/exec";
 
 /* FIXED FETCH */
 async function fetchAPI(options={}){
@@ -198,17 +198,30 @@ async function loadAll(){
   countSubjects.innerText = data.subjects.length;
   countRecords.innerText = data.records.length;
 
-  studentsTable.innerHTML = data.students.map(s=>
-    `<tr><td>${s.Name}</td><td>${s.Email}</td><td>${s.Dept}</td><td>${s.Roll}</td></tr>`
-  ).join("");
+  studentsTable.innerHTML = data.students.map(s => `
+  <tr>
+  <td>${(s.Name || "").trim()}</td>
+  <td>${(s.Email || "").trim()}</td>
+  <td>${(s.Dept || "").trim()}</td>
+  <td>${s.Roll || ""}</td>
+  </tr>
+  `).join("");
 
-  facultyTable.innerHTML = data.faculty.map(f=>
-    `<tr><td>${f.Name}</td><td>${f.Email}</td></tr>`
-  ).join("");
+    facultyTable.innerHTML = data.faculty.map(f => `
+  <tr>
+  <td>${(f.Name || "").trim()}</td>
+  <td>${(f.Email || "").trim()}</td>
+  </tr>
+  `).join("");
 
-  subjectsTable.innerHTML = data.subjects.map(s=>
-    `<tr><td>${s.Code}</td><td>${s.Name}</td><td>${s.Dept}</td><td>${s.Faculty}</td></tr>`
-  ).join("");
+  subjectsTable.innerHTML = data.subjects.map(s => `
+  <tr>
+  <td>${s.Code || ""}</td>
+  <td>${(s.Name || "").trim()}</td>
+  <td>${(s.Dept || "").trim()}</td>
+  <td>${(s.Faculty || "").trim()}</td>
+  </tr>
+  `).join("");
 }
 
 /* ADD FUNCTIONS */
