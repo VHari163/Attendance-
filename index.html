@@ -139,32 +139,10 @@ th,td{padding:12px;border-bottom:1px solid #ddd;text-align:left}
 
 <script>
 
-const API = "https://script.google.com/macros/s/AKfycbyzpHUo3AEA61vcplZEyt5sFrno-cCHorVbszV7wGmKOvPRymGHf2R0MCI2ahiiCWhD/exec";
-
-/* FIXED FETCH */
-async function fetchAPI(options={}){
-  try{
-    const res = await fetch(API,{
-      method: options.method || "GET",
-      body: options.body,
-      headers: {"Content-Type":"application/json"}
-    });
-
-    const text = await res.text();   // IMPORTANT FIX
-    try{
-      return JSON.parse(text);
-    }catch{
-      return text;
-    }
-
-  }catch(err){
-    console.error(err);
-    document.getElementById("error").innerText="API Error";
-  }
-}
+const API = "https://script.google.com/macros/s/AKfycbzMaZd8ZTMzKdIu3OFpaQSrRQhSCldZq2SP2sPsoDWn1uvVduj6LtcQtp2M43jlTVt1/exec";
 
 /* LOGIN */
-async function login(){
+function login(){
   const role = document.getElementById("role").value;
   const email = document.getElementById("email").value;
   const password = document.getElementById("password").value;
@@ -188,12 +166,16 @@ function showSection(id){
   document.getElementById(id).style.display="block";
 }
 
-/* LOAD DATA */
-async function loadAll(){
-  let data = await fetchAPI();
-  console.log("API DATA:", data);   // 👈 ADD THIS LINE HERE
+/* LOAD DATA (JSONP FIX) */
+function loadAll(){
+  const script = document.createElement("script");
+  script.src = API + "?callback=handleData";
+  document.body.appendChild(script);
+}
 
-  if(!data) return;
+/* HANDLE DATA */
+function handleData(data){
+  console.log("API DATA:", data);
 
   countStudents.innerText = data.students.length;
   countFaculty.innerText = data.faculty.length;
@@ -227,26 +209,23 @@ async function loadAll(){
 }
 
 /* ADD FUNCTIONS */
-async function addStudent(){
+function addStudent(){
   const url = `${API}?type=student&name=${encodeURIComponent(sname.value)}&email=${encodeURIComponent(semail.value)}&dept=${encodeURIComponent(sdept.value)}&roll=${encodeURIComponent(sroll.value)}&password=${encodeURIComponent(spass.value)}`;
-  
-  await fetch(url);
+  fetch(url);
   alert("Student Added");
   loadAll();
 }
 
-async function addFaculty(){
+function addFaculty(){
   const url = `${API}?type=faculty&name=${encodeURIComponent(fname.value)}&email=${encodeURIComponent(femail.value)}&password=${encodeURIComponent(fpass.value)}`;
-  
-  await fetch(url);
+  fetch(url);
   alert("Faculty Added");
   loadAll();
 }
 
-async function addSubject(){
+function addSubject(){
   const url = `${API}?type=subject&code=${encodeURIComponent(subcode.value)}&name=${encodeURIComponent(subname.value)}&dept=${encodeURIComponent(subdept.value)}&faculty=${encodeURIComponent(subfac.value)}`;
-  
-  await fetch(url);
+  fetch(url);
   alert("Subject Added");
   loadAll();
 }
