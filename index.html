@@ -191,6 +191,8 @@ function showSection(id){
 /* LOAD DATA */
 async function loadAll(){
   let data = await fetchAPI();
+  console.log("API DATA:", data);   // 👈 ADD THIS LINE HERE
+
   if(!data) return;
 
   countStudents.innerText = data.students.length;
@@ -207,7 +209,7 @@ async function loadAll(){
   </tr>
   `).join("");
 
-    facultyTable.innerHTML = data.faculty.map(f => `
+  facultyTable.innerHTML = data.faculty.map(f => `
   <tr>
   <td>${(f.Name || "").trim()}</td>
   <td>${(f.Email || "").trim()}</td>
