@@ -139,7 +139,7 @@ th,td{padding:12px;border-bottom:1px solid #ddd;text-align:left}
 
 <script>
 
-const API = "https://script.google.com/macros/s/AKfycbyv9wwMwxPXZ5a0E95ftBYqFWsFkrPMbEIUG1yJnQBWWSU06X-1xJnj2WJFgYHbkqi_/exec";
+const API = "https://script.google.com/macros/s/AKfycbzIwKLf3NFuJI8UrKBnra6P_MeL_82iP9HttK-M7BM0_gKaxCjGGEHXfATFCTh6PAGe/exec";
 
 /* FIXED FETCH */
 async function fetchAPI(options={}){
@@ -213,46 +213,25 @@ async function loadAll(){
 
 /* ADD FUNCTIONS */
 async function addStudent(){
-  await fetchAPI({
-    method:"POST",
-    body:JSON.stringify({
-      type:"student",
-      name:sname.value,
-      email:semail.value,
-      dept:sdept.value,
-      roll:sroll.value,
-      password:spass.value
-    })
-  });
+  const url = `${API}?type=student&name=${encodeURIComponent(sname.value)}&email=${encodeURIComponent(semail.value)}&dept=${encodeURIComponent(sdept.value)}&roll=${encodeURIComponent(sroll.value)}&password=${encodeURIComponent(spass.value)}`;
+  
+  await fetch(url);
   alert("Student Added");
   loadAll();
 }
 
 async function addFaculty(){
-  await fetchAPI({
-    method:"POST",
-    body:JSON.stringify({
-      type:"faculty",
-      name:fname.value,
-      email:femail.value,
-      password:fpass.value
-    })
-  });
+  const url = `${API}?type=faculty&name=${encodeURIComponent(fname.value)}&email=${encodeURIComponent(femail.value)}&password=${encodeURIComponent(fpass.value)}`;
+  
+  await fetch(url);
   alert("Faculty Added");
   loadAll();
 }
 
 async function addSubject(){
-  await fetchAPI({
-    method:"POST",
-    body:JSON.stringify({
-      type:"subject",
-      code:subcode.value,
-      name:subname.value,
-      dept:subdept.value,
-      faculty:subfac.value
-    })
-  });
+  const url = `${API}?type=subject&code=${encodeURIComponent(subcode.value)}&name=${encodeURIComponent(subname.value)}&dept=${encodeURIComponent(subdept.value)}&faculty=${encodeURIComponent(subfac.value)}`;
+  
+  await fetch(url);
   alert("Subject Added");
   loadAll();
 }
