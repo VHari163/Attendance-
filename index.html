@@ -147,87 +147,56 @@ th,td{padding:12px;border-bottom:1px solid #ddd;text-align:left}
 <button class="logout" onclick="logout()">Logout</button>
 </div>
 
-<!-- FACULTY PANEL -->
-<div id="facultyUI" class="container hidden">
-<h2>Faculty Dashboard</h2>
-
-<div class="card">
-<input id="fRoll" placeholder="Student Roll">
-<input id="fSubject" placeholder="Subject Code">
-<input id="fTotal" placeholder="Total Classes">
-<input id="fAttended" placeholder="Attended Classes">
-<button onclick="uploadAttendance()">Upload Attendance</button>
-</div>
-
-<button class="logout" onclick="logout()">Logout</button>
-</div>
-
 <script>
-const API = "https://script.google.com/macros/s/AKfycbyKM5p_aq6BHg-WK4hNC9loBTD2xYN3_iaOPZQKH7DWB4f13c5mjqCyHyxdfiud0D7C/exec";
 
+const API = "https://script.google.com/macros/s/AKfycbyKM5p_aq6BHg-WK4hNC9loBTD2xYN3_iaOPZQKH7DWB4f13c5mjqCyHyxdfiud0D7C/exec";
 let GLOBAL_DATA = null;
 
-/* LOGIN */
 function login(){
   const role = roleSelect();
   const email = emailInput();
   const password = passwordInput();
+  errorBox().innerText = "";
 
-  error.innerText="";
-
-  if(role==="admin"){
-    if(email==="Admin@gmail.com" && password==="Admin@1234"){
-      hide("login"); show("adminUI");
+  if(role === "admin"){
+    if(email === "Admin@gmail.com" && password === "Admin@1234"){
+      show("adminUI");
       loadAll();
-    } else error.innerText="Invalid Admin";
+    } else errorBox().innerText="Invalid Admin";
     return;
   }
 
   loadAll(()=>{
-    if(!GLOBAL_DATA) return error.innerText="Data error";
-
     if(role==="student"){
       const user = GLOBAL_DATA.students.find(s =>
-        s.Email?.trim()===email &&
-        String(s.Password||"").trim()===password
+        s.Email.trim()===email && String(s.Password).trim()===password
       );
 
-      if(!user) return error.innerText="Invalid Student";
+      if(user){
+        show("studentUI");
+        studentName.innerText=user.Name;
+        studentRoll.innerText=user.Roll;
+        studentDept.innerText=user.Dept;
 
-      hide("login"); show("studentUI");
+        let rec = GLOBAL_DATA.records.filter(r=>r.Roll==user.Roll);
+        let t=0,a=0;
+        rec.forEach(r=>{t+=+r.Total;a+=+r.Attended});
+        let p = t?((a/t)*100).toFixed(2):0;
 
-      studentName.innerText=user.Name;
-      studentRoll.innerText=user.Roll;
-      studentDept.innerText=user.Dept;
-
-      const rec = GLOBAL_DATA.records.filter(r=>r.Roll==user.Roll);
-      let t=0,a=0;
-      rec.forEach(r=>{t+=+r.Total||0;a+=+r.Attended||0});
-
-      let p = t?((a/t)*100).toFixed(2):0;
-      attendancePercent.innerText=p+"%";
-
-      if(p<75){warningMsg.innerText="⚠️ Low Attendance";warningMsg.style.color="red";}
-      else{warningMsg.innerText="Good";warningMsg.style.color="green";}
+        attendancePercent.innerText=p+"%";
+        warningMsg.innerText = p<75 ? "⚠️ Low Attendance" : "Good Attendance";
+      } else errorBox().innerText="Invalid Student";
     }
 
     if(role==="faculty"){
       const user = GLOBAL_DATA.faculty.find(f =>
-        f.Email?.trim()===email &&
-        String(f.Password||f["Password"]||"").trim()===password
+        f.Email.trim()===email && String(f.Password).trim()===password
       );
 
-      if(!user) return error.innerText="Invalid Faculty";
-
-      hide("login"); show("facultyUI");
+      if(user) alert("Faculty Login Success");
+      else errorBox().innerText="Invalid Faculty";
     }
   });
-}
-
-function uploadAttendance(){
-  const url = `${API}?roll=${fRoll.value}&subject=${fSubject.value}&total=${fTotal.value}&attended=${fAttended.value}`;
-  fetch(url);
-  alert("Uploaded");
 }
 
 function loadAll(cb){
@@ -245,7 +214,7 @@ function loadAll(cb){
 function handleData(data){
   GLOBAL_DATA=data;
 
-  if(!adminUI.classList.contains("hidden")){
+  if(!adminHidden()){
     countStudents.innerText=data.students.length;
     countFaculty.innerText=data.faculty.length;
     countSubjects.innerText=data.subjects.length;
@@ -264,18 +233,34 @@ function handleData(data){
   if(window.afterLoad){window.afterLoad();window.afterLoad=null;}
 }
 
-/* HELPERS */
-function hide(id){document.getElementById(id).style.display="none"}
-function show(id){document.getElementById(id).classList.remove("hidden")}
+function addStudent(){
+  fetch(`${API}?type=student&name=${sname.value}&email=${semail.value}&dept=${sdept.value}&roll=${sroll.value}&password=${spass.value}`);
+  alert("Student Added"); loadAll();
+}
+
+function addFaculty(){
+  fetch(`${API}?type=faculty&name=${fname.value}&email=${femail.value}&password=${fpass.value}`);
+  alert("Faculty Added"); loadAll();
+}
+
+function addSubject(){
+  fetch(`${API}?type=subject&code=${subcode.value}&name=${subname.value}&dept=${subdept.value}&faculty=${subfac.value}`);
+  alert("Subject Added"); loadAll();
+}
+
+/* helpers */
+function show(id){login.style.display="none";document.getElementById(id).classList.remove("hidden")}
+function adminHidden(){return document.getElementById("adminUI").classList.contains("hidden")}
 function roleSelect(){return document.getElementById("role").value}
 function emailInput(){return document.getElementById("email").value.trim()}
 function passwordInput(){return document.getElementById("password").value.trim()}
+function errorBox(){return document.getElementById("error")}
 function logout(){location.reload()}
 
-/* ADD */
-function addStudent(){fetch(`${API}?type=student&name=${sname.value}&email=${semail.value}&dept=${sdept.value}&roll=${sroll.value}&password=${spass.value}`);loadAll();}
-function addFaculty(){fetch(`${API}?type=faculty&name=${fname.value}&email=${femail.value}&password=${fpass.value}`);loadAll();}
-function addSubject(){fetch(`${API}?type=subject&code=${subcode.value}&name=${subname.value}&dept=${subdept.value}&faculty=${subfac.value}`);loadAll();}
+function showSection(id){
+document.querySelectorAll(".section").forEach(s=>s.style.display="none");
+document.getElementById(id).style.display="block";
+}
 
 </script>
 
