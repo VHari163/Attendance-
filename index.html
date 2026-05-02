@@ -214,8 +214,15 @@ function login(){
     if(role==="faculty"){
       const user = GLOBAL_DATA.faculty.find(f =>
         (f.Email || "").trim() === email &&
-        String(f.Password || "").trim() === password
+        String((f.Password || f["Password"] || "")).trim() === password
       );
+
+      if(user){
+        alert("Faculty Login Success");
+      } else {
+        error.innerText="Invalid Faculty";
+      }
+    }
 
       if(user){
         alert("Faculty Login Success");
