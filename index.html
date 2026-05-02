@@ -159,19 +159,21 @@ function login(){
   const email = document.getElementById("email").value.trim();
   const password = document.getElementById("password").value.trim();
 
+  error.innerText = ""; // clear error
+
   // ADMIN LOGIN
   if(role==="admin"){
     if(email==="Admin@gmail.com" && password==="Admin@1234"){
       document.getElementById("login").style.display="none";
       document.getElementById("adminUI").classList.remove("hidden");
       loadAll();
-    }else{
+    } else {
       error.innerText="Invalid Admin";
     }
     return;
   }
 
-  // STUDENT & FACULTY NEED DATA FIRST
+  // LOAD DATA FIRST
   loadAll(() => {
 
     if(!GLOBAL_DATA){
@@ -179,7 +181,7 @@ function login(){
       return;
     }
 
-    // STUDENT LOGIN
+    // ===== STUDENT LOGIN =====
     if(role==="student"){
       const user = GLOBAL_DATA.students.find(s =>
         (s.Email || "").trim() === email &&
@@ -187,9 +189,16 @@ function login(){
       );
 
       if(user){
-        alert("Student Login Success");
+        // SHOW STUDENT UI
+        document.getElementById("login").style.display="none";
+        document.getElementById("studentUI").classList.remove("hidden");
 
-        // calculate attendance
+        // FILL DETAILS
+        studentName.innerText = user.Name;
+        studentRoll.innerText = user.Roll;
+        studentDept.innerText = user.Dept;
+
+        // CALCULATE ATTENDANCE
         const rec = GLOBAL_DATA.records.filter(r => r.Roll == user.Roll);
 
         let total=0, attended=0;
@@ -200,17 +209,22 @@ function login(){
 
         const percent = total ? ((attended/total)*100).toFixed(2) : 0;
 
-        let msg = `Attendance: ${percent}%`;
-        if(percent < 75) msg += " ⚠️ Low Attendance";
+        attendancePercent.innerText = percent + "%";
 
-        alert(msg);
+        if(percent < 75){
+          warningMsg.innerText = "⚠️ Low Attendance";
+          warningMsg.style.color = "red";
+        } else {
+          warningMsg.innerText = "Good Attendance";
+          warningMsg.style.color = "green";
+        }
 
       } else {
         error.innerText="Invalid Student";
       }
     }
 
-    // FACULTY LOGIN
+    // ===== FACULTY LOGIN =====
     if(role==="faculty"){
       const user = GLOBAL_DATA.faculty.find(f =>
         (f.Email || "").trim() === email &&
@@ -224,16 +238,8 @@ function login(){
       }
     }
 
-      if(user){
-        alert("Faculty Login Success");
-      } else {
-        error.innerText="Invalid Faculty";
-      }
-    }
-
   });
 }
-
 function logout(){location.reload()}
 
 /* NAVIGATION */
