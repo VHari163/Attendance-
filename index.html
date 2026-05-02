@@ -151,16 +151,19 @@ th,td{padding:12px;border-bottom:1px solid #ddd;text-align:left}
 
 const API = "https://script.google.com/macros/s/AKfycbyKM5p_aq6BHg-WK4hNC9loBTD2xYN3_iaOPZQKH7DWB4f13c5mjqCyHyxdfiud0D7C/exec";
 
+let GLOBAL_DATA = null; // store API data
+
 /* LOGIN */
 function login(){
-  const roleVal = document.getElementById("role").value;
-  const emailVal = document.getElementById("email").value.trim();
-  const passVal = document.getElementById("password").value.trim();
+  const role = document.getElementById("role").value;
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
 
-  if(roleVal==="admin"){
-    if(emailVal==="Admin@gmail.com" && passVal==="Admin@1234"){
-      login.style.display="none";
-      adminUI.classList.remove("hidden");
+  // ADMIN LOGIN
+  if(role==="admin"){
+    if(email==="Admin@gmail.com" && password==="Admin@1234"){
+      document.getElementById("login").style.display="none";
+      document.getElementById("adminUI").classList.remove("hidden");
       loadAll();
     }else{
       error.innerText="Invalid Admin";
@@ -168,45 +171,60 @@ function login(){
     return;
   }
 
-  const old = document.getElementById("loginScript");
-  if(old) old.remove();
+  // STUDENT & FACULTY NEED DATA FIRST
+  loadAll(() => {
 
-  const script = document.createElement("script");
-  script.id = "loginScript";
-  script.src = API + "?callback=handleLoginData";
-  document.body.appendChild(script);
+    if(!GLOBAL_DATA){
+      error.innerText="Data not loaded";
+      return;
+    }
 
-  window.handleLoginData = function(data){
-    console.log("LOGIN DATA:", data);
-
-    if(roleVal==="student"){
-      const user = data.students.find(s =>
-        s.Email.trim() === emailVal &&
-        String(s.Password).trim() === passVal
+    // STUDENT LOGIN
+    if(role==="student"){
+      const user = GLOBAL_DATA.students.find(s =>
+        (s.Email || "").trim() === email &&
+        String(s.Password || "").trim() === password
       );
 
       if(user){
-        document.getElementById("login").style.display="none";
-        studentUI.classList.remove("hidden");
-        loadStudentDashboard(user, data.records);
-      }else{
+        alert("Student Login Success");
+
+        // calculate attendance
+        const rec = GLOBAL_DATA.records.filter(r => r.Roll == user.Roll);
+
+        let total=0, attended=0;
+        rec.forEach(r=>{
+          total += Number(r.Total || 0);
+          attended += Number(r.Attended || 0);
+        });
+
+        const percent = total ? ((attended/total)*100).toFixed(2) : 0;
+
+        let msg = `Attendance: ${percent}%`;
+        if(percent < 75) msg += " ⚠️ Low Attendance";
+
+        alert(msg);
+
+      } else {
         error.innerText="Invalid Student";
       }
     }
 
-    if(roleVal==="faculty"){
-      const user = data.faculty.find(f =>
-        f.Email.trim() === emailVal &&
-        String(f.Password).trim() === passVal
+    // FACULTY LOGIN
+    if(role==="faculty"){
+      const user = GLOBAL_DATA.faculty.find(f =>
+        (f.Email || "").trim() === email &&
+        String(f.Password || "").trim() === password
       );
 
       if(user){
         alert("Faculty Login Success");
-      }else{
+      } else {
         error.innerText="Invalid Faculty";
       }
     }
-  }
+
+  });
 }
 
 function logout(){location.reload()}
@@ -217,10 +235,12 @@ function showSection(id){
   document.getElementById(id).style.display="block";
 }
 
-/* ADMIN LOAD */
-function loadAll(){
+/* LOAD DATA (JSONP) */
+function loadAll(callback){
   const old = document.getElementById("jsonpScript");
   if(old) old.remove();
+
+  window.afterLoad = callback; // store callback
 
   const script = document.createElement("script");
   script.id = "jsonpScript";
@@ -228,66 +248,71 @@ function loadAll(){
   document.body.appendChild(script);
 }
 
+/* HANDLE DATA */
 function handleData(data){
-  countStudents.innerText = data.students?.length || 0;
-  countFaculty.innerText = data.faculty?.length || 0;
-  countSubjects.innerText = data.subjects?.length || 0;
-  countRecords.innerText = data.records?.length || 0;
+  console.log("API DATA:", data);
 
-  studentsTable.innerHTML = data.students.map(s =>
-    `<tr><td>${s.Name}</td><td>${s.Email}</td><td>${s.Dept}</td><td>${s.Roll}</td></tr>`
-  ).join("");
+  GLOBAL_DATA = data; // IMPORTANT FIX
 
-  facultyTable.innerHTML = data.faculty.map(f =>
-    `<tr><td>${f.Name}</td><td>${f.Email}</td></tr>`
-  ).join("");
+  // ADMIN PANEL DATA
+  if(document.getElementById("adminUI").classList.contains("hidden") === false){
 
-  subjectsTable.innerHTML = data.subjects.map(s =>
-    `<tr><td>${s.Code}</td><td>${s.Name}</td><td>${s.Dept}</td><td>${s.Faculty}</td></tr>`
-  ).join("");
-}
+    countStudents.innerText = data.students?.length || 0;
+    countFaculty.innerText = data.faculty?.length || 0;
+    countSubjects.innerText = data.subjects?.length || 0;
+    countRecords.innerText = data.records?.length || 0;
 
-/* STUDENT DASHBOARD */
-function loadStudentDashboard(user, records){
-  studentName.innerText = user.Name;
-  studentRoll.innerText = user.Roll;
-  studentDept.innerText = user.Dept;
+    studentsTable.innerHTML = data.students.map(s => `
+      <tr>
+        <td>${(s.Name || "").trim()}</td>
+        <td>${(s.Email || "").trim()}</td>
+        <td>${(s.Dept || "").trim()}</td>
+        <td>${s.Roll || ""}</td>
+      </tr>
+    `).join("");
 
-  const myRecords = records.filter(r => String(r.Roll) === String(user.Roll));
+    facultyTable.innerHTML = data.faculty.map(f => `
+      <tr>
+        <td>${(f.Name || "").trim()}</td>
+        <td>${(f.Email || "").trim()}</td>
+      </tr>
+    `).join("");
 
-  let total = 0, attended = 0;
-  myRecords.forEach(r=>{
-    total += Number(r.Total)||0;
-    attended += Number(r.Attended)||0;
-  });
+    subjectsTable.innerHTML = data.subjects.map(s => `
+      <tr>
+        <td>${s.Code || ""}</td>
+        <td>${(s.Name || "").trim()}</td>
+        <td>${(s.Dept || "").trim()}</td>
+        <td>${(s.Faculty || "").trim()}</td>
+      </tr>
+    `).join("");
+  }
 
-  let percent = total ? ((attended/total)*100).toFixed(2) : 0;
-  attendancePercent.innerText = percent + "%";
-
-  if(percent < 75){
-    warningMsg.innerText = "⚠️ Low Attendance";
-    warningMsg.style.color = "red";
-  }else{
-    warningMsg.innerText = "✅ Good Attendance";
-    warningMsg.style.color = "green";
+  // RUN CALLBACK AFTER DATA LOAD
+  if(window.afterLoad){
+    window.afterLoad();
+    window.afterLoad = null;
   }
 }
 
 /* ADD FUNCTIONS */
 function addStudent(){
-  fetch(`${API}?type=student&name=${sname.value}&email=${semail.value}&dept=${sdept.value}&roll=${sroll.value}&password=${spass.value}`);
+  const url = `${API}?type=student&name=${encodeURIComponent(sname.value)}&email=${encodeURIComponent(semail.value)}&dept=${encodeURIComponent(sdept.value)}&roll=${encodeURIComponent(sroll.value)}&password=${encodeURIComponent(spass.value)}`;
+  fetch(url);
   alert("Student Added");
   loadAll();
 }
 
 function addFaculty(){
-  fetch(`${API}?type=faculty&name=${fname.value}&email=${femail.value}&password=${fpass.value}`);
+  const url = `${API}?type=faculty&name=${encodeURIComponent(fname.value)}&email=${encodeURIComponent(femail.value)}&password=${encodeURIComponent(fpass.value)}`;
+  fetch(url);
   alert("Faculty Added");
   loadAll();
 }
 
 function addSubject(){
-  fetch(`${API}?type=subject&code=${subcode.value}&name=${subname.value}&dept=${subdept.value}&faculty=${subfac.value}`);
+  const url = `${API}?type=subject&code=${encodeURIComponent(subcode.value)}&name=${encodeURIComponent(subname.value)}&dept=${encodeURIComponent(subdept.value)}&faculty=${encodeURIComponent(subfac.value)}`;
+  fetch(url);
   alert("Subject Added");
   loadAll();
 }
