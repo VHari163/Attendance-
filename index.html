@@ -147,188 +147,135 @@ th,td{padding:12px;border-bottom:1px solid #ddd;text-align:left}
 <button class="logout" onclick="logout()">Logout</button>
 </div>
 
-<script>
+<!-- FACULTY PANEL -->
+<div id="facultyUI" class="container hidden">
+<h2>Faculty Dashboard</h2>
 
+<div class="card">
+<input id="fRoll" placeholder="Student Roll">
+<input id="fSubject" placeholder="Subject Code">
+<input id="fTotal" placeholder="Total Classes">
+<input id="fAttended" placeholder="Attended Classes">
+<button onclick="uploadAttendance()">Upload Attendance</button>
+</div>
+
+<button class="logout" onclick="logout()">Logout</button>
+</div>
+
+<script>
 const API = "https://script.google.com/macros/s/AKfycbyKM5p_aq6BHg-WK4hNC9loBTD2xYN3_iaOPZQKH7DWB4f13c5mjqCyHyxdfiud0D7C/exec";
 
-let GLOBAL_DATA = null; // store API data
+let GLOBAL_DATA = null;
 
 /* LOGIN */
 function login(){
-  const role = document.getElementById("role").value;
-  const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value.trim();
+  const role = roleSelect();
+  const email = emailInput();
+  const password = passwordInput();
 
-  error.innerText = ""; // clear error
+  error.innerText="";
 
-  // ADMIN LOGIN
   if(role==="admin"){
     if(email==="Admin@gmail.com" && password==="Admin@1234"){
-      document.getElementById("login").style.display="none";
-      document.getElementById("adminUI").classList.remove("hidden");
+      hide("login"); show("adminUI");
       loadAll();
-    } else {
-      error.innerText="Invalid Admin";
-    }
+    } else error.innerText="Invalid Admin";
     return;
   }
 
-  // LOAD DATA FIRST
-  loadAll(() => {
+  loadAll(()=>{
+    if(!GLOBAL_DATA) return error.innerText="Data error";
 
-    if(!GLOBAL_DATA){
-      error.innerText="Data not loaded";
-      return;
-    }
-
-    // ===== STUDENT LOGIN =====
     if(role==="student"){
       const user = GLOBAL_DATA.students.find(s =>
-        (s.Email || "").trim() === email &&
-        String(s.Password || "").trim() === password
+        s.Email?.trim()===email &&
+        String(s.Password||"").trim()===password
       );
 
-      if(user){
-        // SHOW STUDENT UI
-        document.getElementById("login").style.display="none";
-        document.getElementById("studentUI").classList.remove("hidden");
+      if(!user) return error.innerText="Invalid Student";
 
-        // FILL DETAILS
-        studentName.innerText = user.Name;
-        studentRoll.innerText = user.Roll;
-        studentDept.innerText = user.Dept;
+      hide("login"); show("studentUI");
 
-        // CALCULATE ATTENDANCE
-        const rec = GLOBAL_DATA.records.filter(r => r.Roll == user.Roll);
+      studentName.innerText=user.Name;
+      studentRoll.innerText=user.Roll;
+      studentDept.innerText=user.Dept;
 
-        let total=0, attended=0;
-        rec.forEach(r=>{
-          total += Number(r.Total || 0);
-          attended += Number(r.Attended || 0);
-        });
+      const rec = GLOBAL_DATA.records.filter(r=>r.Roll==user.Roll);
+      let t=0,a=0;
+      rec.forEach(r=>{t+=+r.Total||0;a+=+r.Attended||0});
 
-        const percent = total ? ((attended/total)*100).toFixed(2) : 0;
+      let p = t?((a/t)*100).toFixed(2):0;
+      attendancePercent.innerText=p+"%";
 
-        attendancePercent.innerText = percent + "%";
-
-        if(percent < 75){
-          warningMsg.innerText = "⚠️ Low Attendance";
-          warningMsg.style.color = "red";
-        } else {
-          warningMsg.innerText = "Good Attendance";
-          warningMsg.style.color = "green";
-        }
-
-      } else {
-        error.innerText="Invalid Student";
-      }
+      if(p<75){warningMsg.innerText="⚠️ Low Attendance";warningMsg.style.color="red";}
+      else{warningMsg.innerText="Good";warningMsg.style.color="green";}
     }
 
-    // ===== FACULTY LOGIN =====
     if(role==="faculty"){
       const user = GLOBAL_DATA.faculty.find(f =>
-        (f.Email || "").trim() === email &&
-        String((f.Password || f["Password"] || "")).trim() === password
+        f.Email?.trim()===email &&
+        String(f.Password||f["Password"]||"").trim()===password
       );
 
-      if(user){
-        alert("Faculty Login Success");
-      } else {
-        error.innerText="Invalid Faculty";
-      }
-    }
+      if(!user) return error.innerText="Invalid Faculty";
 
+      hide("login"); show("facultyUI");
+    }
   });
 }
-function logout(){location.reload()}
 
-/* NAVIGATION */
-function showSection(id){
-  document.querySelectorAll(".section").forEach(s=>s.style.display="none");
-  document.getElementById(id).style.display="block";
+function uploadAttendance(){
+  const url = `${API}?roll=${fRoll.value}&subject=${fSubject.value}&total=${fTotal.value}&attended=${fAttended.value}`;
+  fetch(url);
+  alert("Uploaded");
 }
 
-/* LOAD DATA (JSONP) */
-function loadAll(callback){
-  const old = document.getElementById("jsonpScript");
+function loadAll(cb){
+  const old=document.getElementById("jsonpScript");
   if(old) old.remove();
 
-  window.afterLoad = callback; // store callback
+  window.afterLoad=cb;
 
-  const script = document.createElement("script");
-  script.id = "jsonpScript";
-  script.src = API + "?callback=handleData";
-  document.body.appendChild(script);
+  const s=document.createElement("script");
+  s.id="jsonpScript";
+  s.src=API+"?callback=handleData";
+  document.body.appendChild(s);
 }
 
-/* HANDLE DATA */
 function handleData(data){
-  console.log("API DATA:", data);
+  GLOBAL_DATA=data;
 
-  GLOBAL_DATA = data; // IMPORTANT FIX
+  if(!adminUI.classList.contains("hidden")){
+    countStudents.innerText=data.students.length;
+    countFaculty.innerText=data.faculty.length;
+    countSubjects.innerText=data.subjects.length;
+    countRecords.innerText=data.records.length;
 
-  // ADMIN PANEL DATA
-  if(document.getElementById("adminUI").classList.contains("hidden") === false){
+    studentsTable.innerHTML=data.students.map(s=>`
+    <tr><td>${s.Name}</td><td>${s.Email}</td><td>${s.Dept}</td><td>${s.Roll}</td></tr>`).join("");
 
-    countStudents.innerText = data.students?.length || 0;
-    countFaculty.innerText = data.faculty?.length || 0;
-    countSubjects.innerText = data.subjects?.length || 0;
-    countRecords.innerText = data.records?.length || 0;
+    facultyTable.innerHTML=data.faculty.map(f=>`
+    <tr><td>${f.Name}</td><td>${f.Email}</td></tr>`).join("");
 
-    studentsTable.innerHTML = data.students.map(s => `
-      <tr>
-        <td>${(s.Name || "").trim()}</td>
-        <td>${(s.Email || "").trim()}</td>
-        <td>${(s.Dept || "").trim()}</td>
-        <td>${s.Roll || ""}</td>
-      </tr>
-    `).join("");
-
-    facultyTable.innerHTML = data.faculty.map(f => `
-      <tr>
-        <td>${(f.Name || "").trim()}</td>
-        <td>${(f.Email || "").trim()}</td>
-      </tr>
-    `).join("");
-
-    subjectsTable.innerHTML = data.subjects.map(s => `
-      <tr>
-        <td>${s.Code || ""}</td>
-        <td>${(s.Name || "").trim()}</td>
-        <td>${(s.Dept || "").trim()}</td>
-        <td>${(s.Faculty || "").trim()}</td>
-      </tr>
-    `).join("");
+    subjectsTable.innerHTML=data.subjects.map(s=>`
+    <tr><td>${s.Code}</td><td>${s.Name}</td><td>${s.Dept}</td><td>${s.Faculty}</td></tr>`).join("");
   }
 
-  // RUN CALLBACK AFTER DATA LOAD
-  if(window.afterLoad){
-    window.afterLoad();
-    window.afterLoad = null;
-  }
+  if(window.afterLoad){window.afterLoad();window.afterLoad=null;}
 }
 
-/* ADD FUNCTIONS */
-function addStudent(){
-  const url = `${API}?type=student&name=${encodeURIComponent(sname.value)}&email=${encodeURIComponent(semail.value)}&dept=${encodeURIComponent(sdept.value)}&roll=${encodeURIComponent(sroll.value)}&password=${encodeURIComponent(spass.value)}`;
-  fetch(url);
-  alert("Student Added");
-  loadAll();
-}
+/* HELPERS */
+function hide(id){document.getElementById(id).style.display="none"}
+function show(id){document.getElementById(id).classList.remove("hidden")}
+function roleSelect(){return document.getElementById("role").value}
+function emailInput(){return document.getElementById("email").value.trim()}
+function passwordInput(){return document.getElementById("password").value.trim()}
+function logout(){location.reload()}
 
-function addFaculty(){
-  const url = `${API}?type=faculty&name=${encodeURIComponent(fname.value)}&email=${encodeURIComponent(femail.value)}&password=${encodeURIComponent(fpass.value)}`;
-  fetch(url);
-  alert("Faculty Added");
-  loadAll();
-}
-
-function addSubject(){
-  const url = `${API}?type=subject&code=${encodeURIComponent(subcode.value)}&name=${encodeURIComponent(subname.value)}&dept=${encodeURIComponent(subdept.value)}&faculty=${encodeURIComponent(subfac.value)}`;
-  fetch(url);
-  alert("Subject Added");
-  loadAll();
-}
+/* ADD */
+function addStudent(){fetch(`${API}?type=student&name=${sname.value}&email=${semail.value}&dept=${sdept.value}&roll=${sroll.value}&password=${spass.value}`);loadAll();}
+function addFaculty(){fetch(`${API}?type=faculty&name=${fname.value}&email=${femail.value}&password=${fpass.value}`);loadAll();}
+function addSubject(){fetch(`${API}?type=subject&code=${subcode.value}&name=${subname.value}&dept=${subdept.value}&faculty=${subfac.value}`);loadAll();}
 
 </script>
 
